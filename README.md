@@ -1,0 +1,2 @@
+# rraytracer
+A toy raytracer.
