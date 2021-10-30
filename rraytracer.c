@@ -7,6 +7,14 @@
 #define HEIGHT 400
 #define WIDTH 600
 
+struct vec3 {
+    float x, y, z;
+};
+
+struct ray {
+    struct vec3 origin, direction;
+};
+
 int main(void) {
     TgaImage image;
     int success;
