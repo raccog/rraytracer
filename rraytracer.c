@@ -27,10 +27,9 @@ int main(void) {
         printf("\rScanlines remaining: %i", HEIGHT - y);
         fflush(stdout);
         for (int x = 0; x < WIDTH; ++x) {
-            TgaColor color = COLOR24(255, 0, 128);
+            TgaColor color = COLOR24((uint8_t)((float)x / WIDTH * 255.0), (uint8_t)((float)y / HEIGHT * 255.0), 128);
             tga_set_pixel(&image, x, y, color);
         }
-        usleep(5000);
     }
     printf("\r\e[2K");
     printf("\rRaytracer finished!\n");
