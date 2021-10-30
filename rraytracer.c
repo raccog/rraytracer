@@ -46,6 +46,10 @@ struct vec3 vec_divf(struct vec3 v, float f) {
     return (struct vec3){v.x / f, v.y / f, v.z / f};
 }
 
+float vec_length_squ(struct vec3 v) {
+    return v.x * v.x + v.y * v.y + v.z * v.z;
+}
+
 float vec_length(struct vec3 v) {
     return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
 }
@@ -68,14 +72,14 @@ struct vec3 ray_at(struct ray r, float t) {
 
 float hit_sphere(struct vec3 center, float radius, struct ray r) {
     struct vec3 oc = vec_sub(r.origin, center);
-    float a = vec_dot(r.direction, r.direction);
-    float b = 2.0f * vec_dot(oc, r.direction);
-    float c = vec_dot(oc, oc) - radius * radius;
-    float discriminant = b * b - 4 * a * c;
+    float a = vec_length_squ(r.direction);
+    float half_b = vec_dot(oc, r.direction);
+    float c = vec_length_squ(oc) - radius * radius;
+    float discriminant = half_b * half_b - a * c;
     if (discriminant < 0) {
         return -1.0;
     } else {
-        return (-b - sqrt(discriminant)) / (2.0 * a);
+        return (-half_b - sqrt(discriminant)) / a;
     }
 }
 
