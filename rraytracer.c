@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -18,6 +19,8 @@
 struct vec3 {
     float x, y, z;
 };
+
+struct vec3 sphere = {0, 0, -1};
 
 struct vec3 vec_add(struct vec3 v1, struct vec3 v2) {
     return (struct vec3){v1.x + v2.x, v1.y + v2.y, v1.z + v2.z};
@@ -47,11 +50,26 @@ struct vec3 vec_unit(struct vec3 v) {
     return vec_divf(v, vec_length(v));
 }
 
+float vec_dot(struct vec3 v1, struct vec3 v2) {
+    return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
+}
+
 struct ray {
     struct vec3 origin, direction;
 };
 
+bool hit_sphere(struct vec3 center, float radius, struct ray r) {
+    struct vec3 oc = vec_sub(r.origin, center);
+    float a = vec_dot(r.direction, r.direction);
+    float b = 2.0f * vec_dot(oc, r.direction);
+    float c = vec_dot(oc, oc) - radius * radius;
+    float discriminant = b * b - 4 * a * c;
+    return (discriminant > 0);
+}
+
 TgaColor ray_color(struct ray r) {
+    if (hit_sphere(sphere, 0.5f, r)) 
+        return (TgaColor)COLOR24(255, 0, 0);
     struct vec3 unit_direction = vec_unit(r.direction);
     float t = 0.5f * (unit_direction.y + 1.0f);
     struct vec3 c1 = {1.0f, 1.0f, 1.0f};
