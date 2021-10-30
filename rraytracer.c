@@ -20,7 +20,15 @@ struct vec3 {
     float x, y, z;
 };
 
-struct vec3 sphere = {0, 0, -1};
+struct sphere {
+    struct vec3 center;
+    float radius;
+};
+
+struct sphere spheres[] = {
+    {{0, 0, -1}, 0.5f},
+    {{0, -100.5f, -1}, 100},
+};
 
 struct vec3 vec_add(struct vec3 v1, struct vec3 v2) {
     return (struct vec3){v1.x + v2.x, v1.y + v2.y, v1.z + v2.z};
@@ -70,11 +78,11 @@ struct vec3 ray_at(struct ray r, float t) {
     return vec_add(r.origin, vec_multf(r.direction, t));
 }
 
-float hit_sphere(struct vec3 center, float radius, struct ray r) {
-    struct vec3 oc = vec_sub(r.origin, center);
+float hit_sphere(struct sphere s, struct ray r) {
+    struct vec3 oc = vec_sub(r.origin, s.center);
     float a = vec_length_squ(r.direction);
     float half_b = vec_dot(oc, r.direction);
-    float c = vec_length_squ(oc) - radius * radius;
+    float c = vec_length_squ(oc) - s.radius * s.radius;
     float discriminant = half_b * half_b - a * c;
     if (discriminant < 0) {
         return -1.0;
@@ -84,9 +92,9 @@ float hit_sphere(struct vec3 center, float radius, struct ray r) {
 }
 
 TgaColor ray_color(struct ray r) {
-    float t = hit_sphere(sphere, 0.5f, r);
+    float t = hit_sphere(spheres[0], r);
     if (t > 0.0) {
-        struct vec3 n = vec_unit(vec_sub(ray_at(r, t), sphere));
+        struct vec3 n = vec_unit(vec_sub(ray_at(r, t), spheres[0].center));
         n = vec_multf(vec_addf(n, 1.0f), 0.5f);
         return (TgaColor){n.x * 255, n.y * 255, n.z * 255};
     }
