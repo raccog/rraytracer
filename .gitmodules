@@ -1,0 +1,3 @@
+[submodule "lib/rtga"]
+	path = lib/rtga
+	url = git@github.com:raccog/rtga.git
