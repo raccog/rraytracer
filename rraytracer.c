@@ -176,6 +176,10 @@ struct vec3 randf_in_unit_sphere() {
     }
 }
 
+struct vec3 randf_unit_vec() {
+    return vec_unit(randf_in_unit_sphere());
+}
+
 struct vec3 randf_in_hemisphere(struct vec3 normal) {
     struct vec3 in_unit_sphere = randf_in_unit_sphere();
     if (vec_dot(in_unit_sphere, normal) > 0.0f) {
