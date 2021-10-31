@@ -190,13 +190,17 @@ struct vec3 ray_color(struct ray r, int depth) {
     c1 = vec_multf(c1, 1.0f - t);
     c2 = vec_multf(c2, t);
     c1 = vec_add(c1, c2);
-    return vec_multf(c1, 255);
+    return c1;
 }
 
 void write_color(TgaImage *image, int x, int y, struct vec3 color, int samples) {
     float scale = 1.0f / samples;
     color = vec_multf(color, scale);
-    color = vec_clamp(color, 0.0f, 255.0f);
+    color.x = sqrt(color.x);
+    color.y = sqrt(color.y);
+    color.z = sqrt(color.z);
+    color = vec_clamp(color, 0.0f, 1.0f);
+    color = vec_multf(color, 255);
 
     tga_set_pixel(image, x, y, (TgaColor)COLOR24(color.x, color.y, color.z));
 }
