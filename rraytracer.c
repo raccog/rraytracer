@@ -176,11 +176,20 @@ struct vec3 randf_in_unit_sphere() {
     }
 }
 
+struct vec3 randf_in_hemisphere(struct vec3 normal) {
+    struct vec3 in_unit_sphere = randf_in_unit_sphere();
+    if (vec_dot(in_unit_sphere, normal) > 0.0f) {
+        return in_unit_sphere;
+    } else {
+        return vec_sub((struct vec3){0, 0, 0}, in_unit_sphere);
+    }
+}
+
 struct vec3 ray_color(struct ray r, int depth) {
     struct hit_record rec;
     if (depth <= 0) return (struct vec3){0, 0, 0};
     if (world_hit(r, 0.001f, INFINITY, &rec)) {
-        struct vec3 target = vec_add(vec_add(rec.p, rec.normal), randf_in_unit_sphere());
+        struct vec3 target = vec_add(vec_add(rec.p, rec.normal), randf_in_hemisphere(rec.normal));
         return vec_multf(ray_color((struct ray){rec.p, vec_sub(target, rec.p)}, depth - 1), 0.5f);
     }
     struct vec3 unit_direction = vec_unit(r.direction);
