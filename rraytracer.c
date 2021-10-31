@@ -11,6 +11,7 @@
 #define WIDTH 600
 #define ASPECT_RATIO ((float)WIDTH / HEIGHT)
 #define SAMPLES 100
+#define MAX_DEPTH 50
 
 #define VIEW_HEIGHT 2.0f
 #define VIEW_WIDTH (ASPECT_RATIO * VIEW_HEIGHT)
@@ -167,10 +168,20 @@ bool world_hit(struct ray r, float t_min, float t_max, struct hit_record *rec) {
     return has_hit;
 }
 
-struct vec3 ray_color(struct ray r) {
+struct vec3 randf_in_unit_sphere() {
+    while (true) {
+        struct vec3 p = vec_randf_range(-1.0f, 1.0f);
+        if (vec_length_squ(p) >= 1.0f) continue;
+        return p;
+    }
+}
+
+struct vec3 ray_color(struct ray r, int depth) {
     struct hit_record rec;
+    if (depth <= 0) return (struct vec3){0, 0, 0};
     if (world_hit(r, 0, INFINITY, &rec)) {
-        return vec_multf(vec_multf(vec_add(rec.normal, (struct vec3){1,1,1}), 0.5f), 255);
+        struct vec3 target = vec_add(vec_add(rec.p, rec.normal), randf_in_unit_sphere());
+        return vec_multf(ray_color((struct ray){rec.p, vec_sub(target, rec.p)}, depth - 1), 0.5f);
     }
     struct vec3 unit_direction = vec_unit(r.direction);
     float t = 0.5f * (unit_direction.y + 1.0f);
@@ -226,7 +237,7 @@ int main(void) {
                 struct ray r = {origin, vec_sub(vec_add(vec_add(
                     low_left_corner, vec_multf(horizontal, u)),
                     vec_multf(vertical, v)), origin)};
-                color = vec_add(color, ray_color(r));
+                color = vec_add(color, ray_color(r, MAX_DEPTH));
             }
             write_color(&image, x, y, color, SAMPLES);
         }
