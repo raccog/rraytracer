@@ -86,6 +86,14 @@ float vec_dot(struct vec3 v1, struct vec3 v2) {
     return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
 
+struct vec3 vec_clamp(struct vec3 v, float min, float max) {
+    return (struct vec3){
+        clamp(v.x, min, max),
+        clamp(v.y, min, max),
+        clamp(v.z, min, max)
+    };
+}
+
 struct ray {
     struct vec3 origin, direction;
 };
@@ -163,6 +171,10 @@ struct vec3 ray_color(struct ray r) {
 }
 
 void write_color(TgaImage *image, int x, int y, struct vec3 color, int samples) {
+    float scale = 1.0f / samples;
+    color = vec_multf(color, scale);
+    color = vec_clamp(color, 0.0f, 255.0f);
+
     tga_set_pixel(image, x, y, (TgaColor)COLOR24(color.x, color.y, color.z));
 }
 
@@ -195,12 +207,15 @@ int main(void) {
         printf("\rScanlines remaining: %i", HEIGHT - y);
         fflush(stdout);
         for (int x = 0; x < WIDTH; ++x) {
-            float u = (float)x / (WIDTH - 1.0f);
-            float v = (float)y / (HEIGHT - 1.0f);
-            struct ray r = {origin, vec_sub(vec_add(vec_add(
-                low_left_corner, vec_multf(horizontal, u)),
-                vec_multf(vertical, v)), origin)};
-            struct vec3 color = ray_color(r);
+            struct vec3 color = {0, 0, 0};
+            for (int s = 0; s < SAMPLES; ++s) {
+                float u = (x + randf()) / (WIDTH - 1.0f);
+                float v = (y + randf()) / (HEIGHT - 1.0f);
+                struct ray r = {origin, vec_sub(vec_add(vec_add(
+                    low_left_corner, vec_multf(horizontal, u)),
+                    vec_multf(vertical, v)), origin)};
+                color = vec_add(color, ray_color(r));
+            }
             write_color(&image, x, y, color, SAMPLES);
         }
     }
