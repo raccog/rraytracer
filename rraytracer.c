@@ -78,28 +78,56 @@ struct vec3 ray_at(struct ray r, float t) {
     return vec_add(r.origin, vec_multf(r.direction, t));
 }
 
-float hit_sphere(struct sphere s, struct ray r) {
+struct hit_record {
+    struct vec3 p, normal;
+    float t;
+    bool front_face;
+};
+
+void record_face_normal(struct hit_record *rec, struct ray r, struct vec3 outward_normal) {
+    rec->front_face = (vec_dot(r.direction, outward_normal) < 0);
+    rec->normal = rec->front_face 
+        ? outward_normal 
+        : vec_sub((struct vec3){0, 0, 0}, outward_normal);
+}
+
+/*float world_hit(struct ray r, float t_min, float t_max, struct hit_record &rec) {
+
+}*/
+
+bool sphere_hit(struct sphere s, struct ray r, float t_min, float t_max, struct hit_record *rec) {
     struct vec3 oc = vec_sub(r.origin, s.center);
     float a = vec_length_squ(r.direction);
     float half_b = vec_dot(oc, r.direction);
     float c = vec_length_squ(oc) - s.radius * s.radius;
     float discriminant = half_b * half_b - a * c;
-    if (discriminant < 0) {
-        return -1.0;
-    } else {
-        return (-half_b - sqrt(discriminant)) / a;
+    if (discriminant < 0) return false;
+
+    float sqrtd = sqrt(discriminant);
+
+    float root = (-half_b - sqrtd) / a;
+    if (root < t_min || root > t_max) {
+        root = (-half_b + sqrtd) / a;
+        if (root < t_min || root < t_max) return false;
     }
+
+    rec->t = root;
+    rec->p = ray_at(r, rec->t);
+    struct vec3 outward_normal = vec_divf(vec_sub(rec->p, s.center), s.radius);
+    record_face_normal(rec, r, outward_normal);
+
+    return true;
 }
 
 TgaColor ray_color(struct ray r) {
-    float t = hit_sphere(spheres[0], r);
-    if (t > 0.0) {
-        struct vec3 n = vec_unit(vec_sub(ray_at(r, t), spheres[0].center));
+    struct hit_record rec;
+    if (sphere_hit(spheres[0], r, 0, INFINITY, &rec)) {
+        struct vec3 n = vec_unit(vec_sub(ray_at(r, rec.t), spheres[0].center));
         n = vec_multf(vec_addf(n, 1.0f), 0.5f);
         return (TgaColor){n.x * 255, n.y * 255, n.z * 255};
     }
     struct vec3 unit_direction = vec_unit(r.direction);
-    t = 0.5f * (unit_direction.y + 1.0f);
+    float t = 0.5f * (unit_direction.y + 1.0f);
     struct vec3 c1 = {1.0f, 1.0f, 1.0f};
     struct vec3 c2 = {0.5f, 0.7f, 1.0f};
     c1 = vec_multf(c1, 1.0f - t);
