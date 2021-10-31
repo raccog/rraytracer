@@ -91,10 +91,6 @@ void record_face_normal(struct hit_record *rec, struct ray r, struct vec3 outwar
         : vec_sub((struct vec3){0, 0, 0}, outward_normal);
 }
 
-/*float world_hit(struct ray r, float t_min, float t_max, struct hit_record &rec) {
-
-}*/
-
 bool sphere_hit(struct sphere s, struct ray r, float t_min, float t_max, struct hit_record *rec) {
     struct vec3 oc = vec_sub(r.origin, s.center);
     float a = vec_length_squ(r.direction);
@@ -108,7 +104,7 @@ bool sphere_hit(struct sphere s, struct ray r, float t_min, float t_max, struct 
     float root = (-half_b - sqrtd) / a;
     if (root < t_min || root > t_max) {
         root = (-half_b + sqrtd) / a;
-        if (root < t_min || root < t_max) return false;
+        if (root < t_min || root > t_max) return false;
     }
 
     rec->t = root;
@@ -119,12 +115,27 @@ bool sphere_hit(struct sphere s, struct ray r, float t_min, float t_max, struct 
     return true;
 }
 
+bool world_hit(struct ray r, float t_min, float t_max, struct hit_record *rec) {
+    struct hit_record tmp_rec;
+    float closest = t_max;
+    bool has_hit = false;
+
+    for (int i = 0; i < sizeof(spheres) / sizeof(struct sphere); ++i) {
+        if (sphere_hit(spheres[i], r, t_min, closest, &tmp_rec)) {
+            has_hit = true;
+            closest = tmp_rec.t;
+            memcpy(rec, &tmp_rec, sizeof(struct hit_record));
+        }
+    }
+
+    return has_hit;
+}
+
 TgaColor ray_color(struct ray r) {
     struct hit_record rec;
-    if (sphere_hit(spheres[0], r, 0, INFINITY, &rec)) {
-        struct vec3 n = vec_unit(vec_sub(ray_at(r, rec.t), spheres[0].center));
-        n = vec_multf(vec_addf(n, 1.0f), 0.5f);
-        return (TgaColor){n.x * 255, n.y * 255, n.z * 255};
+    if (world_hit(r, 0, INFINITY, &rec)) {
+        struct vec3 result = vec_multf(vec_add(rec.normal, (struct vec3){1,1,1}), 0.5f);
+        return (TgaColor)COLOR24(result.x * 255, result.y * 255, result.z * 255);
     }
     struct vec3 unit_direction = vec_unit(r.direction);
     float t = 0.5f * (unit_direction.y + 1.0f);
