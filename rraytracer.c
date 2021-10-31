@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -9,6 +10,7 @@
 #define HEIGHT 400
 #define WIDTH 600
 #define ASPECT_RATIO ((float)WIDTH / HEIGHT)
+#define SAMPLES 100
 
 #define VIEW_HEIGHT 2.0f
 #define VIEW_WIDTH (ASPECT_RATIO * VIEW_HEIGHT)
@@ -131,11 +133,10 @@ bool world_hit(struct ray r, float t_min, float t_max, struct hit_record *rec) {
     return has_hit;
 }
 
-TgaColor ray_color(struct ray r) {
+struct vec3 ray_color(struct ray r) {
     struct hit_record rec;
     if (world_hit(r, 0, INFINITY, &rec)) {
-        struct vec3 result = vec_multf(vec_add(rec.normal, (struct vec3){1,1,1}), 0.5f);
-        return (TgaColor)COLOR24(result.x * 255, result.y * 255, result.z * 255);
+        return vec_multf(vec_multf(vec_add(rec.normal, (struct vec3){1,1,1}), 0.5f), 255);
     }
     struct vec3 unit_direction = vec_unit(r.direction);
     float t = 0.5f * (unit_direction.y + 1.0f);
@@ -144,7 +145,11 @@ TgaColor ray_color(struct ray r) {
     c1 = vec_multf(c1, 1.0f - t);
     c2 = vec_multf(c2, t);
     c1 = vec_add(c1, c2);
-    return (TgaColor)COLOR24(c1.x * 255, c1.y * 255, c1.z * 255);
+    return vec_multf(c1, 255);
+}
+
+void write_color(TgaImage *image, int x, int y, struct vec3 color, int samples) {
+    tga_set_pixel(image, x, y, (TgaColor)COLOR24(color.x, color.y, color.z));
 }
 
 int main(void) {
@@ -181,8 +186,8 @@ int main(void) {
             struct ray r = {origin, vec_sub(vec_add(vec_add(
                 low_left_corner, vec_multf(horizontal, u)),
                 vec_multf(vertical, v)), origin)};
-            TgaColor color = ray_color(r);
-            tga_set_pixel(&image, x, y, color);
+            struct vec3 color = ray_color(r);
+            write_color(&image, x, y, color, SAMPLES);
         }
     }
     printf("\r\e[2K");
