@@ -179,7 +179,7 @@ struct vec3 randf_in_unit_sphere() {
 struct vec3 ray_color(struct ray r, int depth) {
     struct hit_record rec;
     if (depth <= 0) return (struct vec3){0, 0, 0};
-    if (world_hit(r, 0, INFINITY, &rec)) {
+    if (world_hit(r, 0.001f, INFINITY, &rec)) {
         struct vec3 target = vec_add(vec_add(rec.p, rec.normal), randf_in_unit_sphere());
         return vec_multf(ray_color((struct ray){rec.p, vec_sub(target, rec.p)}, depth - 1), 0.5f);
     }
