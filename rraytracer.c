@@ -26,6 +26,12 @@ float randf_range(float min, float max) {
     return min + (max - min) * randf();
 }
 
+float clamp(float x, float min, float max) {
+    if (x < min) return min;
+    if (x > max) return max;
+    return x;
+}
+
 struct vec3 {
     float x, y, z;
 };
