@@ -94,6 +94,18 @@ struct vec3 vec_clamp(struct vec3 v, float min, float max) {
     };
 }
 
+struct vec3 vec_randf() {
+    return (struct vec3){randf(), randf(), randf()};
+}
+
+struct vec3 vec_randf_range(float min, float max) {
+    return (struct vec3){
+        randf_range(min, max),
+        randf_range(min, max),
+        randf_range(min, max)
+    };
+}
+
 struct ray {
     struct vec3 origin, direction;
 };
