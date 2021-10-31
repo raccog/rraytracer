@@ -18,6 +18,14 @@
 
 // This program is based off of Ray Tracing in One Weekend by Peter Shirley (https://raytracing.github.io/books/RayTracingInOneWeekend.html)
 
+float randf() {
+    return rand() / (RAND_MAX + 1.0f);
+}
+
+float randf_range(float min, float max) {
+    return min + (max - min) * randf();
+}
+
 struct vec3 {
     float x, y, z;
 };
