@@ -17,10 +17,10 @@
 #define VIEW_WIDTH (ASPECT_RATIO * VIEW_HEIGHT)
 #define FOCAL_LENGTH 1.0f
 
-#define GROUND {{0.8f, 0.8f, 0.0f}, DIFFUSE, 0}
-#define CENTER {{0.7f, 0.3f, 0.3f}, DIFFUSE, 0}
-#define LEFT {{0.8f, 0.8f, 0.8f}, METAL, 0.3f}
-#define RIGHT {{0.8f, 0.6f, 0.2f}, METAL, 1.0f}
+#define GROUND {{0.8f, 0.8f, 0.0f}, DIFFUSE, 0, 0}
+#define CENTER {{0.3f, 0.3f, 0.7f}, DIFFUSE, 0, 0}
+#define LEFT {{0.8f, 0.8f, 0.8f}, DIELECTRIC, 0, 1.5f}
+#define RIGHT {{0.8f, 0.6f, 0.2f}, METAL, 0.1f, 0}
 
 // This program is based off of Ray Tracing in One Weekend by Peter Shirley (https://raytracing.github.io/books/RayTracingInOneWeekend.html)
 
@@ -45,12 +45,14 @@ struct vec3 {
 enum material_type {
     DIFFUSE,
     METAL,
+    DIELECTRIC
 };
 
 struct material {
     struct vec3 color;
     enum material_type type;
     float fuzz;
+    float refraction;
 };
 
 struct sphere {
@@ -62,7 +64,7 @@ struct sphere {
 struct sphere spheres[] = {
     {{0, 0, -1}, 0.5f, CENTER},
     {{0, -100.5f, -1}, 100, GROUND},
-    {{-1, 0.5f, -1}, 0.5f, LEFT},
+    {{-1, 0, -1}, 0.5f, LEFT},
     {{1, 0.5f, -1}, 0.5f, RIGHT}
 };
 
@@ -141,6 +143,13 @@ bool vec_near_zero(struct vec3 v) {
 
 struct vec3 vec_reflect(struct vec3 v, struct vec3 n) {
     return vec_sub(v, vec_multf(n, 2 * vec_dot(v, n)));
+}
+
+struct vec3 vec_refract(struct vec3 v, struct vec3 n, float etai_over_etat) {
+    float cos_theta = fmin(vec_dot(vec_sub((struct vec3){0,0,0}, v), n), 1.0f);
+    struct vec3 r_out_perp = vec_multf(vec_add(v, vec_multf(n, cos_theta)), etai_over_etat);
+    struct vec3 r_out_parallel = vec_multf(n, -sqrt(fabs(1.0f - vec_length_squ(r_out_perp))));
+    return vec_add(r_out_perp, r_out_parallel);
 }
 
 struct ray {
@@ -247,6 +256,31 @@ bool scatter_metal(struct ray input, struct hit_record rec, struct vec3 *attenua
     return (vec_dot(scattered->direction, rec.normal) > 0);
 }
 
+bool scatter_refract(struct ray input, struct hit_record rec, struct vec3 *attenuation, struct ray *scattered) {
+    attenuation->x = 1;
+    attenuation->y = 1;
+    attenuation->z = 1;
+    float refraction_ratio = rec.front_face ? (1.0f / rec.mat.refraction) : rec.mat.refraction;
+
+    struct vec3 unit_direction = vec_unit(input.direction);
+    float cos_theta = fmin(vec_dot(vec_sub((struct vec3){0,0,0}, unit_direction), rec.normal), 1.0f);
+    float sin_theta = sqrt(1.0f - cos_theta * cos_theta);
+
+    bool cannot_refract = refraction_ratio * sin_theta > 1.0f;
+    struct vec3 direction;
+
+    if (cannot_refract) {
+        direction = vec_reflect(unit_direction, rec.normal);
+    } else {
+        direction = vec_refract(unit_direction, rec.normal, refraction_ratio);
+    }
+
+    scattered->origin = rec.p;
+    scattered->direction = direction;
+
+    return true;
+}
+
 struct vec3 ray_color(struct ray r, int depth) {
     struct hit_record rec;
     if (depth <= 0) return (struct vec3){0, 0, 0};
@@ -258,6 +292,8 @@ struct vec3 ray_color(struct ray r, int depth) {
             success = scatter_diffuse(r, rec, &attenuation, &scattered);
         } else if (rec.mat.type == METAL) {
             success = scatter_metal(r, rec, &attenuation, &scattered);
+        } else if (rec.mat.type == DIELECTRIC) {
+            success = scatter_refract(r, rec, &attenuation, &scattered);
         }
         if (success) {
             return vec_mult(attenuation, ray_color(scattered, depth - 1));
