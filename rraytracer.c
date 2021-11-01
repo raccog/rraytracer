@@ -17,10 +17,10 @@
 #define VIEW_WIDTH (ASPECT_RATIO * VIEW_HEIGHT)
 #define FOCAL_LENGTH 1.0f
 
-#define GROUND {{0.8f, 0.8f, 0.0f}, DIFFUSE}
-#define CENTER {{0.7f, 0.3f, 0.3f}, DIFFUSE}
-#define LEFT {{0.8f, 0.8f, 0.8f}, METAL}
-#define RIGHT {{0.8f, 0.6f, 0.2f}, METAL}
+#define GROUND {{0.8f, 0.8f, 0.0f}, DIFFUSE, 0}
+#define CENTER {{0.7f, 0.3f, 0.3f}, DIFFUSE, 0}
+#define LEFT {{0.8f, 0.8f, 0.8f}, METAL, 0.3f}
+#define RIGHT {{0.8f, 0.6f, 0.2f}, METAL, 1.0f}
 
 // This program is based off of Ray Tracing in One Weekend by Peter Shirley (https://raytracing.github.io/books/RayTracingInOneWeekend.html)
 
@@ -50,6 +50,7 @@ enum material_type {
 struct material {
     struct vec3 color;
     enum material_type type;
+    float fuzz;
 };
 
 struct sphere {
@@ -241,7 +242,7 @@ bool scatter_diffuse(struct ray input, struct hit_record rec, struct vec3 *atten
 bool scatter_metal(struct ray input, struct hit_record rec, struct vec3 *attenuation, struct ray *scattered) {
     struct vec3 reflected = vec_reflect(vec_unit(input.direction), rec.normal);
     scattered->origin = rec.p;
-    scattered->direction = reflected;
+    scattered->direction = vec_add(reflected, vec_multf(randf_in_unit_sphere(), rec.mat.fuzz));
     memcpy(attenuation, &rec.mat.color, sizeof(struct vec3));
     return (vec_dot(scattered->direction, rec.normal) > 0);
 }
