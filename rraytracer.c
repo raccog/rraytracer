@@ -17,6 +17,11 @@
 #define VIEW_WIDTH (ASPECT_RATIO * VIEW_HEIGHT)
 #define FOCAL_LENGTH 1.0f
 
+#define GROUND {{0.8f, 0.8f, 0.0f}, DIFFUSE}
+#define CENTER {{0.7f, 0.3f, 0.3f}, DIFFUSE}
+#define LEFT {{0.8f, 0.8f, 0.8f}, METAL}
+#define RIGHT {{0.8f, 0.6f, 0.2f}, METAL}
+
 // This program is based off of Ray Tracing in One Weekend by Peter Shirley (https://raytracing.github.io/books/RayTracingInOneWeekend.html)
 
 float randf() {
@@ -37,14 +42,27 @@ struct vec3 {
     float x, y, z;
 };
 
+enum material_type {
+    DIFFUSE,
+    METAL,
+};
+
+struct material {
+    struct vec3 color;
+    enum material_type type;
+};
+
 struct sphere {
     struct vec3 center;
     float radius;
+    struct material mat;
 };
 
 struct sphere spheres[] = {
-    {{0, 0, -1}, 0.5f},
-    {{0, -100.5f, -1}, 100},
+    {{0, 0, -1}, 0.5f, CENTER},
+    {{0, -100.5f, -1}, 100, GROUND},
+    {{-1, 0.5f, -1}, 0.5f, LEFT},
+    {{1, 0.5f, -1}, 0.5f, RIGHT}
 };
 
 struct vec3 vec_add(struct vec3 v1, struct vec3 v2) {
@@ -57,6 +75,14 @@ struct vec3 vec_addf(struct vec3 v, float f) {
 
 struct vec3 vec_sub(struct vec3 v1, struct vec3 v2) {
     return (struct vec3){v1.x - v2.x, v1.y - v2.y, v1.z - v2.z};
+}
+
+struct vec3 vec_subf(struct vec3 v, float f) {
+    return (struct vec3){v.x - f, v.y - f, v.z - f};
+}
+
+struct vec3 vec_mult(struct vec3 v1, struct vec3 v2) {
+    return (struct vec3){v1.x * v2.x, v1.y * v2.y, v1.z * v2.z};
 }
 
 struct vec3 vec_multf(struct vec3 v, float f) {
@@ -107,6 +133,15 @@ struct vec3 vec_randf_range(float min, float max) {
     };
 }
 
+bool vec_near_zero(struct vec3 v) {
+    float s = 1e-8;
+    return (fabs(v.x) < s) && (fabs(v.y) < s) && (fabs(v.z) < s);
+}
+
+struct vec3 vec_reflect(struct vec3 v, struct vec3 n) {
+    return vec_sub(v, vec_multf(n, 2 * vec_dot(v, n)));
+}
+
 struct ray {
     struct vec3 origin, direction;
 };
@@ -119,6 +154,7 @@ struct hit_record {
     struct vec3 p, normal;
     float t;
     bool front_face;
+    struct material mat;
 };
 
 void record_face_normal(struct hit_record *rec, struct ray r, struct vec3 outward_normal) {
@@ -148,6 +184,7 @@ bool sphere_hit(struct sphere s, struct ray r, float t_min, float t_max, struct 
     rec->p = ray_at(r, rec->t);
     struct vec3 outward_normal = vec_divf(vec_sub(rec->p, s.center), s.radius);
     record_face_normal(rec, r, outward_normal);
+    rec->mat = s.mat;
 
     return true;
 }
@@ -189,12 +226,42 @@ struct vec3 randf_in_hemisphere(struct vec3 normal) {
     }
 }
 
+bool scatter_diffuse(struct ray input, struct hit_record rec, struct vec3 *attenuation, struct ray *scattered) {
+    struct vec3 scatter_direction = vec_add(rec.normal , randf_unit_vec());
+    if (vec_near_zero(scatter_direction)) {
+        scatter_direction = rec.normal;
+    }
+    scattered->origin = rec.p;
+    scattered->direction = scatter_direction;
+    memcpy(attenuation, &rec.mat.color, sizeof(struct vec3));
+
+    return true;
+}
+
+bool scatter_metal(struct ray input, struct hit_record rec, struct vec3 *attenuation, struct ray *scattered) {
+    struct vec3 reflected = vec_reflect(vec_unit(input.direction), rec.normal);
+    scattered->origin = rec.p;
+    scattered->direction = reflected;
+    memcpy(attenuation, &rec.mat.color, sizeof(struct vec3));
+    return (vec_dot(scattered->direction, rec.normal) > 0);
+}
+
 struct vec3 ray_color(struct ray r, int depth) {
     struct hit_record rec;
     if (depth <= 0) return (struct vec3){0, 0, 0};
     if (world_hit(r, 0.001f, INFINITY, &rec)) {
-        struct vec3 target = vec_add(vec_add(rec.p, rec.normal), randf_in_hemisphere(rec.normal));
-        return vec_multf(ray_color((struct ray){rec.p, vec_sub(target, rec.p)}, depth - 1), 0.5f);
+        struct ray scattered;
+        struct vec3 attenuation;
+        bool success;
+        if (rec.mat.type == DIFFUSE) {
+            success = scatter_diffuse(r, rec, &attenuation, &scattered);
+        } else if (rec.mat.type == METAL) {
+            success = scatter_metal(r, rec, &attenuation, &scattered);
+        }
+        if (success) {
+            return vec_mult(attenuation, ray_color(scattered, depth - 1));
+        }
+        return (struct vec3){0, 0, 0};
     }
     struct vec3 unit_direction = vec_unit(r.direction);
     float t = 0.5f * (unit_direction.y + 1.0f);
