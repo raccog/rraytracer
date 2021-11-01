@@ -38,6 +38,12 @@ float clamp(float x, float min, float max) {
     return x;
 }
 
+float reflectance(float cosine, float ref_idx) {
+    float r0 = (1 - ref_idx) / (1 + ref_idx);
+    r0 *= r0;
+    return r0 + (1 - r0) * pow(1 - cosine, 5);
+}
+
 struct vec3 {
     float x, y, z;
 };
@@ -269,7 +275,7 @@ bool scatter_refract(struct ray input, struct hit_record rec, struct vec3 *atten
     bool cannot_refract = refraction_ratio * sin_theta > 1.0f;
     struct vec3 direction;
 
-    if (cannot_refract) {
+    if (cannot_refract || reflectance(cos_theta, refraction_ratio) > randf()) {
         direction = vec_reflect(unit_direction, rec.normal);
     } else {
         direction = vec_refract(unit_direction, rec.normal, refraction_ratio);
