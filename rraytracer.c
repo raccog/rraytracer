@@ -10,17 +10,17 @@
 #define HEIGHT 400
 #define WIDTH 600
 #define ASPECT_RATIO ((float)WIDTH / HEIGHT)
-#define SAMPLES 100
+#define SAMPLES 500
 #define MAX_DEPTH 50
 
 #define VIEW_HEIGHT 2.0f
 #define VIEW_WIDTH (ASPECT_RATIO * VIEW_HEIGHT)
 #define FOCAL_LENGTH 1.0f
 
-#define GROUND {{0.8f, 0.8f, 0.0f}, DIFFUSE, 0, 0}
+#define GROUND {{0.8f, 0.8f, 0.0f}, METAL, 1, 0}
 #define CENTER {{0.3f, 0.3f, 0.7f}, DIFFUSE, 0, 0}
 #define LEFT {{0.8f, 0.8f, 0.8f}, DIELECTRIC, 0, 1.5f}
-#define RIGHT {{0.8f, 0.6f, 0.2f}, METAL, 0.1f, 0}
+#define RIGHT {{0.8f, 0.2f, 0.2f}, METAL, 0.1f, 0}
 
 // This program is based off of Ray Tracing in One Weekend by Peter Shirley (https://raytracing.github.io/books/RayTracingInOneWeekend.html)
 
@@ -70,7 +70,7 @@ struct sphere {
 struct sphere spheres[] = {
     {{0, 0, -1}, 0.5f, CENTER},
     {{0, -100.5f, -1}, 100, GROUND},
-    {{-1, 0, -1}, 0.5f, LEFT},
+    {{-1, 0, -1}, -0.5f, LEFT},
     {{1, 0.5f, -1}, 0.5f, RIGHT}
 };
 
@@ -325,7 +325,7 @@ void write_color(TgaImage *image, int x, int y, struct vec3 color, int samples) 
     color = vec_clamp(color, 0.0f, 1.0f);
     color = vec_multf(color, 255);
 
-    tga_set_pixel(image, x, y, (TgaColor)COLOR24(color.x, color.y, color.z));
+    tga_set_pixel(image, x, y, COLOR24(color.x, color.y, color.z));
 }
 
 int main(void) {
